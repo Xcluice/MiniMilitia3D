@@ -1,0 +1,60 @@
+name: Build Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Accept SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      - name: Build signed release APK
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle assembleRelease --no-daemon --console=plain 2>&1 | tee build.log
+
+      - name: Report compile errors
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "^e: |error:|What went wrong" -A1 build.log | head -60
+
+      - name: Copy APK
+        run: cp app/build/outputs/apk/release/app-release.apk MiniMilitia3D.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MiniMilitia3D-release
+          path: MiniMilitia3D.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Mini Militia 3D FPS v1.0.${{ github.run_number }}
+          body: |
+            - True 3D COD-style First-Person Shooter in landscape mode (OpenGL ES 3.0)
+            - 3D Outpost floating islands, sky bridges, and Monstera foliage
+            - First-person 3D weapon viewmodels: Uzi SMG, Chrome Magnum, Pump Shotgun, RPG-7, and bouncing Frag Grenades
+            - Full 3D jetpack thrust, gravity, platform collision, recoil, ADS zoom, and blast knockback
+            - 3D Sarge & Enemy Soldier AI waves + tactical radar minimap
+          files: MiniMilitia3D.apk
