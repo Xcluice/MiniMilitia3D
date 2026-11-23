@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle assembleRelease --no-daemon --console=plain 2>&1 | tee build.log
+          gradle assembleRelease -PappVersionCode=${{ github.run_number }} -PappVersionName=1.0.${{ github.run_number }} --no-daemon --console=plain 2>&1 | tee build.log
 
       - name: Report compile errors
         if: failure()
